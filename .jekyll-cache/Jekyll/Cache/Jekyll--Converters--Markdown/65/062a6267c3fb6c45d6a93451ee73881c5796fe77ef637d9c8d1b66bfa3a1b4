@@ -1,0 +1,311 @@
+I":M<h2 id="introduction">Introduction</h2>
+<p>Airbnb has thousands of places available for renting all over the world with lots of options and price ranges available for travelers. A regular airbnb listing will have a main picture, a title, and a price rate. Guests can also leave a review after their stay, so then others can read and get a better idea of what to expect from this place.</p>
+
+<p>So there is a variaty of data that can be collected, now the question would be; Is there a hidden data treasure worth millions somewhere in this data? Probably not, but it’s worth to explore it for the sake of learning. (.. and for passing my college course)</p>
+
+<p>Without further ado, this project has the following:</p>
+<ol>
+  <li>Data extraction: Airbnb non-official API. <a href="posts/airbnb01/">airbnb01</a></li>
+  <li>Image recognition and Sentiment Analysis. <a href="posts/airbnb02/">airbnb02</a></li>
+  <li>Data exploration and Dashboard design. <a href="posts/airbnb03/">airbnb03</a></li>
+</ol>
+
+<h2 id="data-extraction">Data Extraction</h2>
+<p>First it is important to mention there is no official release of an API from Airbnb. However it is still possible to get JSON responses from the URL and this unofficial API has all that very well documented <a href="https://stevesie.com/apps/airbnb-api">here</a>.</p>
+
+<p>So using the “unofficial airbnb API” we can fetch the data and store it into a .csv file. One of the fields has the URL to access the main picture of each listing, that is what will later be used in our image recognition analysis. (Spoiler Alert: Using Azure cognitive services.)</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+</pre></td><td class="rouge-code"><pre><span class="c1"># unofficial Airbnb API: https://stevesie.com/apps/airbnb-api
+</span>
+<span class="kn">import</span> <span class="nn">airbnb</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">airbnb</span><span class="p">.</span><span class="n">Api</span><span class="p">(</span><span class="n">randomize</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c1"># Pagianation for the API calls
+</span><span class="n">page</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="c1"># Initialize a dictionary and data frame to store listings details.
+</span><span class="n">place_dtl</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">'id'</span><span class="p">,</span><span class="s">'city'</span><span class="p">,</span><span class="s">'neighborhood'</span><span class="p">,</span><span class="s">'name'</span><span class="p">,</span><span class="s">'lat'</span><span class="p">,</span><span class="s">'lng'</span><span class="p">,</span><span class="s">'person_capacity'</span><span class="p">,</span><span class="s">'space_type'</span><span class="p">,</span><span class="s">'picture_url'</span><span class="p">,</span>
+          <span class="s">'price_rate'</span><span class="p">]</span>
+<span class="n">airbnb_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+<span class="c1"># Exploring data to build the schema for the dataframe
+# data = api.get_homes('Toronto, ON', items_per_grid=50, offset=500)
+# len(data['explore_tabs'][0]['sections'][0]['listings'])
+</span></pre></td></tr></tbody></table></code></pre></div></div>
+
+<h3 id="listing-details-extraction">Listing details extraction</h3>
+<p>Nothing too fancy, just storing details in the dataframe and later exporting it to <strong>airbnb_listing.csv</strong>.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+</pre></td><td class="rouge-code"><pre><span class="k">while</span> <span class="n">page</span> <span class="o">&lt;=</span> <span class="mi">300</span><span class="p">:</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">api</span><span class="p">.</span><span class="n">get_homes</span><span class="p">(</span><span class="s">'Toronto, ON'</span><span class="p">,</span> <span class="n">items_per_grid</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">page</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s">'explore_tabs'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">'sections'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">'listings'</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'id'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'id'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'city'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'city'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'neighborhood'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'neighborhood'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'name'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'name'</span><span class="p">]</span>        
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'lat'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'lat'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'lng'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'lng'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'person_capacity'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'person_capacity'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'space_type'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'space_type'</span><span class="p">]</span>
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'price_rate'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'pricing_quote'</span><span class="p">][</span><span class="s">'rate'</span><span class="p">][</span><span class="s">'amount'</span><span class="p">]</span>            
+            <span class="n">place_dtl</span><span class="p">[</span><span class="s">'picture_url'</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="s">'listing'</span><span class="p">][</span><span class="s">'picture_url'</span><span class="p">]</span>
+            <span class="n">airbnb_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">airbnb_df</span><span class="p">)]</span> <span class="o">=</span> <span class="n">place_dtl</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">continue</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">f"last id from page: </span><span class="si">{</span><span class="n">page</span><span class="si">}</span><span class="s"> : </span><span class="si">{</span><span class="n">place_dtl</span><span class="p">[</span><span class="s">'id'</span><span class="p">]</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>    
+    <span class="n">page</span> <span class="o">+=</span> <span class="mi">50</span>
+<span class="n">airbnb_df</span><span class="p">.</span><span class="n">to_csv</span> <span class="p">(</span><span class="s">'airbnb_listing.csv'</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="rouge-code"><pre>last id from page: 0 : 40204854
+last id from page: 50 : 25719877
+last id from page: 100 : 17682704
+last id from page: 150 : 29945949
+last id from page: 200 : 12836500
+last id from page: 250 : 34899472
+last id from page: 300 : 43948056
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<h3 id="reviews-details-extraction">Reviews details extraction</h3>
+<p>A similar process but now for the reviews.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="rouge-code"><pre><span class="n">comment_dtl</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="n">r_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s">'listing_id'</span><span class="p">,</span><span class="s">'author'</span><span class="p">,</span><span class="s">'rating'</span><span class="p">,</span><span class="s">'comments'</span><span class="p">]</span>
+<span class="n">reviews_df</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">r_columns</span><span class="p">)</span>
+
+<span class="c1"># I will read the listing
+</span><span class="n">listing</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">'airbnb_listing.csv'</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre></td><td class="rouge-code"><pre><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">listing</span><span class="p">[</span><span class="s">'id'</span><span class="p">]:</span>
+    <span class="n">reviews</span> <span class="o">=</span> <span class="n">api</span><span class="p">.</span><span class="n">get_reviews</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reviews</span><span class="p">[</span><span class="s">'reviews'</span><span class="p">]:</span>
+        <span class="n">comment_dtl</span><span class="p">[</span><span class="s">'listing_id'</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="n">comment_dtl</span><span class="p">[</span><span class="s">'author'</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s">'author'</span><span class="p">][</span><span class="s">'smart_name'</span><span class="p">]</span>
+        <span class="n">comment_dtl</span><span class="p">[</span><span class="s">'rating'</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s">'rating'</span><span class="p">]</span>
+        <span class="n">comment_dtl</span><span class="p">[</span><span class="s">'comments'</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="p">[</span><span class="s">'comments'</span><span class="p">]</span>
+        <span class="n">reviews_df</span><span class="p">.</span><span class="n">loc</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">reviews_df</span><span class="p">)]</span> <span class="o">=</span> <span class="n">comment_dtl</span>
+<span class="n">reviews_df</span><span class="p">.</span><span class="n">to_csv</span> <span class="p">(</span><span class="s">'airbnb_reviews.csv'</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> 
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<h2 id="the-datasets">The datasets</h2>
+<p>Finally we will check what we got.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+</pre></td><td class="rouge-code"><pre><span class="n">listing</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">'airbnb_listing.csv'</span><span class="p">)</span>
+<span class="n">reviews</span> <span class="o">=</span> <span class="n">pd</span><span class="p">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">'airbnb_reviews.csv'</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<h3 id="listing-dataset-airbnb_listingcsv">Listing dataset: airbnb_listing.csv</h3>
+<p>These are the first 3 rows for the listing dataset:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre><span class="n">listing</span><span class="p">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">9</span><span class="p">].</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>city</th>
+      <th>neighborhood</th>
+      <th>name</th>
+      <th>lat</th>
+      <th>lng</th>
+      <th>person_capacity</th>
+      <th>space_type</th>
+      <th>picture_url</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>28103946</td>
+      <td>Toronto</td>
+      <td>Downtown Toronto</td>
+      <td>Chic, Modern condo downtown by Scotiabank Arena!</td>
+      <td>43.64327</td>
+      <td>-79.38115</td>
+      <td>4</td>
+      <td>Entire condominium</td>
+      <td>https://a0.muscache.com/im/pictures/36fa807f-2...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>11533218</td>
+      <td>Toronto</td>
+      <td>Downtown Toronto</td>
+      <td>Luxurious Condo near CN Tower with FREE PARKING</td>
+      <td>43.64252</td>
+      <td>-79.39617</td>
+      <td>4</td>
+      <td>Entire condominium</td>
+      <td>https://a0.muscache.com/im/pictures/a22f9757-3...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>12290314</td>
+      <td>Toronto</td>
+      <td>Downtown Toronto</td>
+      <td>Take in Panoramic City Views from a Sophistica...</td>
+      <td>43.65391</td>
+      <td>-79.38273</td>
+      <td>2</td>
+      <td>Entire condominium</td>
+      <td>https://a0.muscache.com/4ea/air/v2/pictures/f3...</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="reviews-dataset-airbnb_reviewscsv">Reviews dataset: airbnb_reviews.csv</h3>
+<p>We have collected a maximum of 5 reviews per listing.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre></td><td class="rouge-code"><pre><span class="n">reviews</span><span class="p">.</span><span class="n">loc</span><span class="p">[</span><span class="n">reviews</span><span class="p">[</span><span class="s">'id'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">28103946</span><span class="p">]</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>author</th>
+      <th>rating</th>
+      <th>comments</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1259</th>
+      <td>28103946</td>
+      <td>Tyler</td>
+      <td>5</td>
+      <td>This condo is an incredible location in downto...</td>
+    </tr>
+    <tr>
+      <th>1260</th>
+      <td>28103946</td>
+      <td>Emmanuel</td>
+      <td>5</td>
+      <td>Outstanding place and perfect location for one...</td>
+    </tr>
+    <tr>
+      <th>1261</th>
+      <td>28103946</td>
+      <td>Alicia</td>
+      <td>5</td>
+      <td>Great place at a great location!</td>
+    </tr>
+    <tr>
+      <th>1262</th>
+      <td>28103946</td>
+      <td>Miah</td>
+      <td>5</td>
+      <td>This place was in the heart of Toronto! So clo...</td>
+    </tr>
+    <tr>
+      <th>1263</th>
+      <td>28103946</td>
+      <td>Lalji</td>
+      <td>5</td>
+      <td>a greal location, easy check in and clean place</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+:ET
