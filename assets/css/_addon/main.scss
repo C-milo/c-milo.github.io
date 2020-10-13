@@ -760,11 +760,13 @@ img {
 
 /*--- Begin of Markdown table style ---*/
 div.post-content .table-wrapper {
-  overflow-x: auto;
+  /* overflow-x: auto; */
+  overflow-x: scroll;
 
   >table {
     min-width: 60%;
-    overflow-x: auto;
+    /* overflow-x: auto; */
+    overflow-x: scroll;
     border-spacing: 0;
     margin-bottom: 1.5rem;
 
