@@ -10,7 +10,7 @@
 
 title: Camilo Acosta                          # the main title
 
-tagline: Th3Vs.  # it will display as the sub-title
+tagline: Error 404 Hero.  # it will display as the sub-title
 
 description: >-                        # used by seo meta and the atom feed
   A simple blog on data science 
@@ -52,7 +52,7 @@ google_site_verification: google_meta_tag_verification # change to your verifica
 baseurl: ''
 
 # Change to your timezone › http://www.timezoneconverter.com/cgi-bin/findzone/findzone
-timezone: Asia/Shanghai
+timezone: America/Vancouver
 
 google_analytics:
   id: ''          # Fill with your Google Analytics ID

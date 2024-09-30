@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # Create HTML pages for Categories and Tags in posts.
 #
@@ -10,7 +10,7 @@
 # © 2020 Cotes Chung
 # Published under MIT License
 
-set -eu
+#set -eu
 
 TYPE_CATEGORY=0
 TYPE_TAG=1
